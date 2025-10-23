@@ -4,7 +4,7 @@
       "command": "npx",
       "args": ["api-docs-mcp"],
       "env": {
-        "MCP_API_SOURCES": "[{\"name\":\"GitHub\",\"type\":\"gql\",\"url\":\"https://docs.github.com/public/fpt/schema.docs.graphql\"}]"
+        "API_SOURCES": "[{\"name\":\"GitHub\",\"type\":\"gql\",\"url\":\"https://docs.github.com/public/fpt/schema.docs.graphql\"}]"
       }
     }
   }
