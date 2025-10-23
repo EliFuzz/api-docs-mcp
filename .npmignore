@@ -1,0 +1,30 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Configuration files
+tsconfig.json
+eslint.config.mjs
+.eslintrc.json
+
+# Development files
+.vscode/
+.github/
+node_modules/
+.DS_Store
+
+# Lock files
+pnpm-lock.yaml
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+
+# Schema (if not needed for runtime)
+schema.json

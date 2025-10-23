@@ -1,0 +1,57 @@
+{
+  "name": "api-docs-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for API and GraphQL documentation and search",
+  "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "bin": {
+    "api-docs-mcp": "build/index.js"
+  },
+  "files": [
+    "build",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "start": "node build/index.js",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "graphql",
+    "api-docs"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@graphql-tools/graphql-file-loader": "8.1.2",
+    "@graphql-tools/load": "8.1.2",
+    "@graphql-tools/url-loader": "9.0.0",
+    "@graphql-tools/utils": "10.9.1",
+    "@modelcontextprotocol/sdk": "1.20.1",
+    "graphql": "16.11.0",
+    "module-alias": "^2.2.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "0.17.2",
+    "@types/node": "^24.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "concurrently": "9.2.1",
+    "cross-env": "10.1.0",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "tsc-alias": "^1.8.16",
+    "typescript": "5.9.3"
+  }
+}
