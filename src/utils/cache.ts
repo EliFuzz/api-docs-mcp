@@ -1,13 +1,15 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from '@graphql-tools/load';
 import { buildClientSchema } from "graphql";
+import { processApiSchema } from "src/api/api";
 import { processGqlSchema } from "src/gql/gql";
 import { loadConfig } from "src/utils/config";
 import { fetchGqlSchema } from "src/utils/fetch";
 import { isFileGql, isFileJSON, readFile } from "src/utils/file";
-import { FileSource, isFileSource, isGqlType, SchemaSource, UrlSource } from "src/utils/source";
+import { FileSource, isApiType, isFileSource, isGqlType, SchemaSource, UrlSource } from "src/utils/source";
 
 export interface DetailEntry {
+    headers?: string;
     request?: string;
     response?: string;
     error?: string;
@@ -16,7 +18,12 @@ export interface DetailEntry {
 export enum ResourceType {
     QUERY = 'query',
     MUTATION = 'mutation',
-    SUBSCRIPTION = 'subscription'
+    SUBSCRIPTION = 'subscription',
+    GET = 'GET',
+    POST = 'POST',
+    PUT = 'PUT',
+    DELETE = 'DELETE',
+    PATCH = 'PATCH'
 }
 
 export interface SchemaDetail {
@@ -119,13 +126,24 @@ export class CacheManager {
                 return;
             }
         }
+
+        if (isApiType(source)) {
+            Cache.set({ name: source.name, source, resources: await processApiSchema(source.path), timestamp: Date.now() });
+            return;
+        }
     }
 
     private static async processUrlSource(source: UrlSource): Promise<void> {
         if (isGqlType(source)) {
-            const response = await fetchGqlSchema(source) as any;
+            const response = await fetchGqlSchema(source) as never;
             const schema = buildClientSchema(response);
             Cache.set({ name: source.name, source, resources: await processGqlSchema(schema), timestamp: Date.now() });
+            return;
+        }
+
+        if (isApiType(source)) {
+            Cache.set({ name: source.name, source, resources: await processApiSchema(source.url), timestamp: Date.now() });
+            return;
         }
     }
 }

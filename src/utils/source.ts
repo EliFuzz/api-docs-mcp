@@ -1,5 +1,6 @@
 export enum SourceType {
     GQL = 'gql',
+    API = 'api',
 }
 
 export enum SourceMethod {
@@ -10,7 +11,7 @@ export enum SourceMethod {
 export interface FileSource {
     name: string;
     path: string;
-    type: SourceType.GQL;
+    type: SourceType.GQL | SourceType.API;
 }
 
 export interface UrlSource {
@@ -18,7 +19,7 @@ export interface UrlSource {
     method: SourceMethod;
     url: string;
     headers?: Record<string, string>;
-    type: SourceType.GQL;
+    type: SourceType.GQL | SourceType.API;
 }
 
 export type SchemaSource = FileSource | UrlSource;
@@ -29,4 +30,8 @@ export const isFileSource = (source: SchemaSource): source is FileSource => {
 
 export const isGqlType = (source: SchemaSource): boolean => {
     return source.type === SourceType.GQL;
+}
+
+export const isApiType = (source: SchemaSource): boolean => {
+    return source.type === SourceType.API;
 }
