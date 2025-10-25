@@ -13,7 +13,7 @@ server.registerTool('api_search', {
             name: z.string().describe('The name of the cache entry'),
             resources: z.array(z.object({
                 name: z.string().describe('The name of the resource'),
-                resourceType: z.enum(['query', 'mutation', 'subscription']).describe('The type of GraphQL resource'),
+                resourceType: z.string().describe('The type of API resource'),
                 description: z.string().describe('Context or description of the resource'),
                 details: z.object({
                     request: z.string().describe('The request structure or input parameters for the API method').optional(),
