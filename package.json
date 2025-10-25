@@ -1,6 +1,6 @@
 {
   "name": "api-docs-mcp",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "MCP server for API and GraphQL documentation and search",
   "type": "module",
   "main": "build/index.js",
