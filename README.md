@@ -40,11 +40,11 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 
 ### Petstore retrieval of all available GET methods
 
-<video src="./assets/openapi-petstore.mp4" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/26023600-d809-47f2-9254-2de6a73bb23a" width="100%" controls></video>
 
 ### Petstore retrieval of a specific method
 
-<video src="./assets/openapi-petstore-order.mp4" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/9ef66e19-c83b-4dcb-b7d0-44b3d94f140a" width="100%" controls></video>
 
 ## Architecture
 
