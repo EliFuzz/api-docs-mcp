@@ -25,6 +25,15 @@ export const fetchGqlSchema = async (source: UrlSource): Promise<unknown> => {
     return result.data;
 };
 
+export const fetchApiSchema = async (source: UrlSource): Promise<Record<string, unknown>> => {
+    const response = await fetchSchema(source.url, source.method, source.headers);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch API schema from ${source.url}: ${response.statusText}`);
+    }
+
+    return await response.json() as Record<string, unknown>;
+};
+
 const fetchSchema = (url: string, method: string, headers?: Record<string, string>, body?: string): Promise<Response> => {
     return fetch(url, { method, ...(headers && { headers }), ...(body && { body }) });
 }

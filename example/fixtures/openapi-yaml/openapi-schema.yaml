@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+  description: Test OpenAPI API
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /users:
+    get:
+      summary: Get all users
+      description: Retrieve a list of all users
+      operationId: getUsers
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          $ref: "./components/responses.yaml#/UsersListResponse"
+    post:
+      summary: Create a new user
+      description: Create a new user in the system
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./components/schemas.yaml#/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "./components/schemas.yaml#/User"
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "./components/responses.yaml#/UserResponse"
+        "404":
+          $ref: "./components/responses.yaml#/NotFoundResponse"
+    put:
+      summary: Update user
+      description: Update an existing user
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./components/schemas.yaml#/UpdateUserRequest"
+      responses:
+        "200":
+          $ref: "./components/responses.yaml#/UserResponse"
+    delete:
+      summary: Delete user
+      description: Delete a user by ID
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "./components/responses.yaml#/NoContentResponse"

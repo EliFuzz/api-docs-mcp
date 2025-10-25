@@ -1,0 +1,39 @@
+{
+  "UserResponse": {
+    "description": "Successful user response",
+    "content": {
+      "application/json": {
+        "schema": {
+          "$ref": "./schemas.json#/User"
+        }
+      }
+    }
+  },
+  "UsersListResponse": {
+    "description": "Successful response with list of users",
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "users": {
+              "type": "array",
+              "items": {
+                "$ref": "./schemas.json#/User"
+              }
+            },
+            "total": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  },
+  "NotFoundResponse": {
+    "description": "User not found"
+  },
+  "NoContentResponse": {
+    "description": "User deleted successfully"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "User": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "User ID"
+      },
+      "name": {
+        "type": "string",
+        "description": "User name"
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "description": "User email"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"],
+        "description": "User status"
+      },
+      "createdAt": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Creation timestamp"
+      }
+    },
+    "required": ["id", "name", "email"]
+  },
+  "CreateUserRequest": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "User name"
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "description": "User email"
+      }
+    },
+    "required": ["name", "email"]
+  },
+  "UpdateUserRequest": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "User name"
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "description": "User email"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"],
+        "description": "User status"
+      }
+    }
+  }
+}

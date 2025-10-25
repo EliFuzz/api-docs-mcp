@@ -4,7 +4,7 @@ import { buildClientSchema } from "graphql";
 import { processApiSchema } from "src/api/api";
 import { processGqlSchema } from "src/gql/gql";
 import { loadConfig } from "src/utils/config";
-import { fetchGqlSchema } from "src/utils/fetch";
+import { fetchApiSchema, fetchGqlSchema } from "src/utils/fetch";
 import { isFileGql, isFileJSON, readFile } from "src/utils/file";
 import { FileSource, isApiType, isFileSource, isGqlType, SchemaSource, UrlSource } from "src/utils/source";
 
@@ -78,6 +78,10 @@ class Cache {
     public static getBySourceName(sourceName: string): CacheEntry | null {
         return this.docs.find(doc => doc.source.name === sourceName) || null;
     }
+
+    public static clear(): void {
+        this.docs = [];
+    }
 }
 
 export class CacheManager {
@@ -105,8 +109,12 @@ export class CacheManager {
         return Cache.getDetails(detailName);
     }
 
+    public static clear(): void {
+        Cache.clear();
+    }
+
     private static async fetchAndCache(source: SchemaSource): Promise<void> {
-        isFileSource(source) ? this.processFileSource(source) : this.processUrlSource(source);
+        return isFileSource(source) ? this.processFileSource(source) : this.processUrlSource(source);
     }
 
     private static async processFileSource(source: FileSource): Promise<void> {
@@ -142,7 +150,8 @@ export class CacheManager {
         }
 
         if (isApiType(source)) {
-            Cache.set({ name: source.name, source, resources: await processApiSchema(source.url), timestamp: Date.now() });
+            const schemaContent = await fetchApiSchema(source);
+            Cache.set({ name: source.name, source, resources: await processApiSchema(schemaContent), timestamp: Date.now() });
             return;
         }
     }

@@ -1,0 +1,94 @@
+"""
+Root query type
+"""
+type Query {
+  """
+  Get user by ID
+  """
+  user(
+    """
+    User ID
+    """
+    id: ID!
+  ): User
+
+  """
+  Get all users
+  """
+  users: [User!]!
+}
+
+"""
+Root mutation type
+"""
+type Mutation {
+  """
+  Create a new user
+  """
+  createUser(
+    """
+    User input data
+    """
+    input: CreateUserInput!
+  ): User
+}
+
+"""
+User object
+"""
+type User {
+  """
+  User ID
+  """
+  id: ID!
+
+  """
+  User name
+  """
+  name: String!
+
+  """
+  User email
+  """
+  email: String!
+
+  """
+  User status
+  """
+  status: UserStatus
+}
+
+"""
+Input for creating a user
+"""
+input CreateUserInput {
+  """
+  User name
+  """
+  name: String!
+
+  """
+  User email
+  """
+  email: String!
+}
+
+"""
+User status enum
+"""
+enum UserStatus {
+  """
+  User is active
+  """
+  ACTIVE
+
+  """
+  User is inactive
+  """
+  INACTIVE
+
+  """
+  User is suspended
+  """
+  SUSPENDED
+}
