@@ -7,6 +7,9 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 - [API Docs MCP](#api-docs-mcp)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
+  - [Example Use Cases](#example-use-cases)
+    - [Petstore retrieval of all available GET methods](#petstore-retrieval-of-all-available-get-methods)
+    - [Petstore retrieval of a specific method](#petstore-retrieval-of-a-specific-method)
   - [Architecture](#architecture)
   - [Installation](#installation)
   - [Configuration](#configuration)
@@ -32,6 +35,16 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
   - **OpenAPI/Swagger**: Supports loading OpenAPI/Swagger `yaml` / `yml` / `json` schemas from local files or remote URLs.
 - **Environment-based Configuration**: Configures API sources via the `API_SOURCES` environment variable, allowing flexible deployment and management.
 - **Automatic Cache Refresh**: Periodically refreshes cached schema data to ensure up-to-date documentation.
+
+## Example Use Cases
+
+### Petstore retrieval of all available GET methods
+
+![](./assets/openapi-petstore.mp4)
+
+### Petstore retrieval of a specific method
+
+![](./assets/openapi-petstore-order.mp4)
 
 ## Architecture
 
