@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package example.user;
+
+import "common.proto";
+
+// User message with common fields
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+  UserRole role = 5;
+  example.common.Timestamp created_at = 6;
+  example.common.Timestamp updated_at = 7;
+}
+
+// User role enum
+enum UserRole {
+  GUEST = 0;
+  USER = 1;
+  ADMIN = 2;
+  SUPER_ADMIN = 3;
+}
+
+// User profile message
+message UserProfile {
+  User user = 1;
+  string bio = 2;
+  string avatar_url = 3;
+  repeated string interests = 4;
+}

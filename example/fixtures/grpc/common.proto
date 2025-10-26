@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package example.common;
+
+// Common timestamp message
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// Common pagination message
+message Pagination {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+// Common error message
+message Error {
+  int32 code = 1;
+  string message = 2;
+  string details = 3;
+}
+
+// Common status enum
+enum Status {
+  UNKNOWN = 0;
+  SUCCESS = 1;
+  FAILURE = 2;
+  PENDING = 3;
+}

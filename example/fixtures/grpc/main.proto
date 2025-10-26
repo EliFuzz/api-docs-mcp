@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package example.main;
+
+import "user.proto";
+import "common.proto";
+
+// Main user service using imported types
+service UserManagementService {
+  // Get user profile by ID
+  rpc GetUserProfile(GetUserProfileRequest) returns (example.user.UserProfile);
+  
+  // List users with pagination
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Create a new user
+  rpc CreateUser(CreateUserRequest) returns (example.user.User);
+  
+  // Update user profile
+  rpc UpdateUserProfile(UpdateUserProfileRequest) returns (example.user.UserProfile);
+  
+  // Delete user
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}
+
+// Get user profile request
+message GetUserProfileRequest {
+  string id = 1;
+}
+
+// List users request with pagination
+message ListUsersRequest {
+  example.common.Pagination pagination = 1;
+  string filter = 2;
+}
+
+// List users response
+message ListUsersResponse {
+  repeated example.user.User users = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// Create user request
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+  int32 age = 3;
+  example.user.UserRole role = 4;
+}
+
+// Update user profile request
+message UpdateUserProfileRequest {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string bio = 4;
+  string avatar_url = 5;
+  repeated string interests = 6;
+}
+
+// Delete user request
+message DeleteUserRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+// Delete user response
+message DeleteUserResponse {
+  example.common.Status status = 1;
+  string message = 2;
+  example.common.Timestamp deleted_at = 3;
+}

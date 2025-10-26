@@ -1,6 +1,6 @@
 # API Docs MCP
 
-Model Context Protocol (MCP) server that provides tools for interacting with API documentation. Supports both GraphQL and OpenAPI/Swagger specifications, fetching schema definitions from various sources (local files or remote URLs), caching them, and exposing them through a set of tools.
+Model Context Protocol (MCP) server that provides tools for interacting with API documentation. Supports GraphQL, OpenAPI/Swagger, and gRPC specifications, fetching schema definitions from various sources (local files or remote URLs), caching them, and exposing them through a set of tools.
 
 ## Table of Contents
 
@@ -33,6 +33,7 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 - **Multiple Source Support**:
   - **GraphQL**: Supports loading GraphQL schemas from `graphql` / `gql` files or `json` introspection results (local files or remote URLs).
   - **OpenAPI/Swagger**: Supports loading OpenAPI/Swagger `yaml` / `yml` / `json` schemas from local files or remote URLs.
+  - **gRPC**: Supports loading gRPC schemas from `proto` files or via gRPC reflection from remote URLs.
 - **Environment-based Configuration**: Configures API sources via the `API_SOURCES` environment variable, allowing flexible deployment and management.
 - **Automatic Cache Refresh**: Periodically refreshes cached schema data to ensure up-to-date documentation.
 
@@ -56,14 +57,15 @@ graph TD
     tools e2@--> cacheManager{Cache Manager};
     cacheManager e3@--> configuration[Configuration:<br/>API_SOURCES env var];
     configuration e4@--> schemaSources{Schema Sources};
-    schemaSources e5@-- FileSource--> localFiles(Local Files:<br/>.graphql, .json, .yaml);
-    schemaSources e6@-- UrlSource--> remoteUrls(Remote URLs:<br/>GraphQL Endpoints, OpenAPI/Swagger Endpoints);
+    schemaSources e5@-- FileSource--> localFiles(Local Files:<br/>.graphql, .json, .yaml, .proto);
+    schemaSources e6@-- UrlSource--> remoteUrls(Remote URLs:<br/>GraphQL Endpoints, OpenAPI/Swagger Endpoints, gRPC Endpoints);
     localFiles e7@--> processor[Schema Processors];
     remoteUrls e8@--> processor;
     processor e9@--> cacheManager;
     processor e10@--> openAPIProcessor(OpenAPI Processor:<br/>OpenAPI/Swagger);
-    processor e11@--> graphQLProcessor(GraphQL Processor)
-    cacheManager e12@--Cached Data--> tools;
+    processor e11@--> graphQLProcessor(GraphQL Processor);
+    processor e12@--> grpcProcessor(gRPC Processor)
+    cacheManager e13@--Cached Data--> tools;
 
     subgraph Core Components
         mcpServer
@@ -79,6 +81,7 @@ graph TD
         processor
         openAPIProcessor
         graphQLProcessor
+        grpcProcessor
     end
 
     e1@{ animate: true }
@@ -93,6 +96,7 @@ graph TD
     e10@{ animate: true }
     e11@{ animate: true }
     e12@{ animate: true }
+    e13@{ animate: true }
 ```
 
 **Flow of Operations:**
@@ -101,9 +105,9 @@ graph TD
 2. **Configuration Loading**: The `CacheManager` loads API source configurations from the `API_SOURCES` environment variable via `src/utils/config.ts`.
 3. **Schema Fetching & Caching**:
    - Based on the configured sources (file-based or URL-based), the `CacheManager` fetches API schemas.
-   - For file sources, it reads local files (`graphql`, `gql`, `json`, `yaml`, `yml`).
-   - For URL sources, it makes HTTP requests to GraphQL or OpenAPI endpoints.
-   - Schemas are then processed by specialized handlers (`src/api/api.ts` for OpenAPI, `src/gql/gql.ts` for GraphQL).
+   - For file sources, it reads local files (`graphql`, `gql`, `json`, `yaml`, `yml`, `proto`).
+   - For URL sources, it makes HTTP requests to GraphQL, OpenAPI, or gRPC endpoints.
+   - Schemas are then processed by specialized handlers (`src/api/api.ts` for OpenAPI, `src/gql/gql.ts` for GraphQL, `src/grpc/grpc.ts` for gRPC).
    - The processed documentation is stored in an in-memory cache (`src/utils/cache.ts`) with a specified TTL (Time-To-Live).
    - The cache is periodically refreshed.
 4. **Tool Usage**:
@@ -159,6 +163,16 @@ For a local OpenAPI JSON schema:
 }
 ```
 
+For a local gRPC proto file:
+
+```json
+{
+  "name": "MyGrpcFile",
+  "path": "/path/to/your/service.proto",
+  "type": "grpc"
+}
+```
+
 ### `UrlSource` Example
 
 For a remote GraphQL endpoint:
@@ -183,6 +197,16 @@ For a remote OpenAPI endpoint:
   "method": "GET",
   "url": "https://petstore.swagger.io/v2/swagger.json",
   "type": "api"
+}
+```
+
+For a remote gRPC endpoint with reflection:
+
+```json
+{
+  "name": "MyGrpcService",
+  "url": "grpc://localhost:9090",
+  "type": "grpc"
 }
 ```
 
@@ -359,6 +383,8 @@ The server will connect to a `StdioServerTransport`, meaning it will communicate
 │ │ └── api.ts
 │ ├── gql/ # GraphQL schema processing
 │ │ └── gql.ts
+│ ├── grpc/ # gRPC schema processing
+│ │ └── grpc.ts
 │ ├── tools/ # MCP tools definitions
 │ │ ├── api_docs.ts
 │ │ └── api_search.ts

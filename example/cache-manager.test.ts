@@ -3,6 +3,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import { join } from 'path';
 import { CacheManager } from '../build/utils/cache.js';
 import { SourceMethod, SourceType } from '../build/utils/source.js';
+import { MockGrpcServer } from './helpers/mock-grpc-server.js';
 import { MockHttpServer } from './helpers/mock-server.js';
 import { clearCache, setupCacheWithSources } from './helpers/test-utils.js';
 
@@ -195,6 +196,127 @@ describe('CacheManager - File-based Sources', () => {
         });
     });
 
+    describe('gRPC Proto File', () => {
+        it('should load and cache gRPC schema from single proto file', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCProto',
+                    type: SourceType.GRPC,
+                    path: join(fixturesPath, 'grpc/service.proto')
+                }
+            ]);
+
+            const docs = await CacheManager.getDocs('TestGRPCProto');
+
+            assert.strictEqual(docs.length, 1, 'Should have one cache entry');
+            assert.strictEqual(docs[0].name, 'TestGRPCProto', 'Cache entry name should match');
+            assert.ok(docs[0].resources.length > 0, 'Should have resources');
+
+            const getUserMethod = docs[0].resources.find(r => r.name === 'example.UserService.GetUser');
+            assert.ok(getUserMethod, 'Should have GetUser method');
+            assert.strictEqual(getUserMethod.context, 'gRPC Unary method', 'GetUser should be unary method');
+
+            const listUsersMethod = docs[0].resources.find(r => r.name === 'example.UserService.ListUsers');
+            assert.ok(listUsersMethod, 'Should have ListUsers method');
+
+            const createUserMethod = docs[0].resources.find(r => r.name === 'example.UserService.CreateUser');
+            assert.ok(createUserMethod, 'Should have CreateUser method');
+
+            const streamUsersMethod = docs[0].resources.find(r => r.name === 'example.UserService.StreamUsers');
+            assert.ok(streamUsersMethod, 'Should have StreamUsers method');
+            assert.strictEqual(streamUsersMethod.context, 'gRPC Server Streaming method', 'StreamUsers should be server streaming method');
+        });
+
+        it('should retrieve specific method details from gRPC proto schema', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCProto',
+                    type: SourceType.GRPC,
+                    path: join(fixturesPath, 'grpc/service.proto')
+                }
+            ]);
+
+            const details = await CacheManager.getDetails('example.UserService.GetUser');
+
+            assert.ok(details.length > 0, 'Should find GetUser method details');
+            assert.strictEqual(details[0].resources[0].name, 'example.UserService.GetUser', 'Should match method name');
+
+            const getUserResource = details[0].resources[0];
+            assert.ok(getUserResource.details.request, 'Should have request details');
+            assert.ok(getUserResource.details.response, 'Should have response details');
+
+            const request = JSON.parse(getUserResource.details.request);
+            assert.strictEqual(request.type, 'GetUserRequest', 'Request type should be GetUserRequest');
+            assert.strictEqual(request.stream, false, 'Request should not be streaming');
+            assert.ok(Array.isArray(request.fields), 'Request should have fields array');
+
+            const response = JSON.parse(getUserResource.details.response);
+            assert.strictEqual(response.type, 'User', 'Response type should be User');
+            assert.strictEqual(response.stream, false, 'Response should not be streaming');
+        });
+    });
+
+    describe('gRPC Multiple Proto Files', () => {
+        it('should load and cache gRPC schema from multiple proto files', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCMultiProto',
+                    type: SourceType.GRPC,
+                    path: join(fixturesPath, 'grpc/main.proto')
+                }
+            ]);
+
+            const docs = await CacheManager.getDocs('TestGRPCMultiProto');
+
+            assert.strictEqual(docs.length, 1, 'Should have one cache entry');
+            assert.strictEqual(docs[0].name, 'TestGRPCMultiProto', 'Cache entry name should match');
+            assert.ok(docs[0].resources.length > 0, 'Should have resources');
+
+            const getUserProfileMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.GetUserProfile');
+            assert.ok(getUserProfileMethod, 'Should have GetUserProfile method');
+
+            const listUsersMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.ListUsers');
+            assert.ok(listUsersMethod, 'Should have ListUsers method');
+
+            const createUserMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.CreateUser');
+            assert.ok(createUserMethod, 'Should have CreateUser method');
+
+            const updateUserProfileMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.UpdateUserProfile');
+            assert.ok(updateUserProfileMethod, 'Should have UpdateUserProfile method');
+
+            const deleteUserMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.DeleteUser');
+            assert.ok(deleteUserMethod, 'Should have DeleteUser method');
+        });
+
+        it('should retrieve specific method details from multi-file gRPC schema', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCMultiProto',
+                    type: SourceType.GRPC,
+                    path: join(fixturesPath, 'grpc/main.proto')
+                }
+            ]);
+
+            const details = await CacheManager.getDetails('example.main.UserManagementService.CreateUser');
+
+            assert.ok(details.length > 0, 'Should find CreateUser method details');
+            assert.strictEqual(details[0].resources[0].name, 'example.main.UserManagementService.CreateUser', 'Should match method name');
+
+            const createUserResource = details[0].resources[0];
+            assert.ok(createUserResource.details.request, 'Should have request details');
+            assert.ok(createUserResource.details.response, 'Should have response details');
+
+            const request = JSON.parse(createUserResource.details.request);
+            assert.strictEqual(request.type, 'CreateUserRequest', 'Request type should be CreateUserRequest');
+            assert.ok(Array.isArray(request.fields), 'Request should have fields array');
+            assert.ok(request.fields.some((f: any) => f.name === 'name'), 'Request should have name field');
+            assert.ok(request.fields.some((f: any) => f.name === 'email'), 'Request should have email field');
+
+            const response = JSON.parse(createUserResource.details.response);
+            assert.ok(response.type === 'User' || response.type === 'example.user.User', 'Response type should be User type');
+        });
+    });
+
     describe('Multiple Sources', () => {
         it('should handle multiple schema sources simultaneously', async () => {
             await setupCacheWithSources([
@@ -225,8 +347,10 @@ describe('CacheManager - File-based Sources', () => {
 
 describe('CacheManager - URL-based Sources', () => {
     let mockServer: MockHttpServer;
+    let mockGrpcServer: MockGrpcServer;
     const fixturesPath = join(process.cwd(), 'example', 'fixtures');
     const TEST_PORT = 8765;
+    const GRPC_TEST_PORT = 9090;
 
     beforeEach(() => {
         clearCache();
@@ -240,10 +364,17 @@ describe('CacheManager - URL-based Sources', () => {
             openApiYamlPath: join(fixturesPath, 'openapi-yaml', 'openapi-schema.yaml')
         });
         await mockServer.start();
+
+        mockGrpcServer = new MockGrpcServer({
+            port: GRPC_TEST_PORT,
+            protoFiles: [join(fixturesPath, 'grpc/service.proto')]
+        });
+        await mockGrpcServer.start();
     });
 
     after(async () => {
         await mockServer.stop();
+        await mockGrpcServer.stop();
     });
 
     describe('GraphQL URL Source', () => {
@@ -375,6 +506,158 @@ describe('CacheManager - URL-based Sources', () => {
 
             const openapiUrlDocs = allDocs.filter(d => d.name === 'OpenAPIURL');
             assert.strictEqual(openapiUrlDocs.length, 1, 'Should have OpenAPI URL cache entry');
+        });
+    });
+
+    describe('gRPC URL Source', () => {
+        it('should load and cache gRPC schema from URL via reflection', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCURL',
+                    type: SourceType.GRPC,
+                    url: mockGrpcServer.getUrl()
+                }
+            ]);
+
+            const docs = await CacheManager.getDocs('TestGRPCURL');
+
+            assert.strictEqual(docs.length, 1, 'Should have one cache entry');
+            assert.strictEqual(docs[0].name, 'TestGRPCURL', 'Cache entry name should match');
+            assert.ok(docs[0].resources.length > 0, 'Should have resources');
+
+            const getUserMethod = docs[0].resources.find(r => r.name === 'example.UserService.GetUser');
+            assert.ok(getUserMethod, 'Should have GetUser method');
+            assert.strictEqual(getUserMethod.context, 'gRPC Unary method', 'GetUser should be unary method');
+
+            const listUsersMethod = docs[0].resources.find(r => r.name === 'example.UserService.ListUsers');
+            assert.ok(listUsersMethod, 'Should have ListUsers method');
+
+            const streamUsersMethod = docs[0].resources.find(r => r.name === 'example.UserService.StreamUsers');
+            assert.ok(streamUsersMethod, 'Should have StreamUsers method');
+            assert.strictEqual(streamUsersMethod.context, 'gRPC Server Streaming method', 'StreamUsers should be server streaming method');
+        });
+
+        it('should retrieve specific method details from gRPC URL source', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCURL',
+                    type: SourceType.GRPC,
+                    url: mockGrpcServer.getUrl()
+                }
+            ]);
+
+            const details = await CacheManager.getDetails('example.UserService.GetUser');
+
+            assert.ok(details.length > 0, 'Should find GetUser method details');
+            assert.strictEqual(details[0].resources[0].name, 'example.UserService.GetUser', 'Should match method name');
+
+            const getUserResource = details[0].resources[0];
+            assert.ok(getUserResource.details.request, 'Should have request details');
+            assert.ok(getUserResource.details.response, 'Should have response details');
+
+            const request = JSON.parse(getUserResource.details.request);
+            assert.strictEqual(request.type, 'GetUserRequest', 'Request type should be GetUserRequest');
+            assert.strictEqual(request.stream, false, 'Request should not be streaming');
+            assert.ok(Array.isArray(request.fields), 'Request should have fields array');
+
+            const response = JSON.parse(getUserResource.details.response);
+            assert.strictEqual(response.type, 'User', 'Response type should be User');
+            assert.strictEqual(response.stream, false, 'Response should not be streaming');
+
+            // Verify no unknown types
+            let unknownCount = 0;
+            const checkUnknown = (obj: any) => {
+                if (obj.type === 'unknown') unknownCount++;
+                if (obj.fields) {
+                    obj.fields.forEach((f: any) => {
+                        if (f.type === 'unknown' || f.type?.includes('unknown')) unknownCount++;
+                        if (f.fields) checkUnknown(f);
+                    });
+                }
+            };
+            checkUnknown(request);
+            checkUnknown(response);
+            assert.strictEqual(unknownCount, 0, 'Should have no unknown types');
+        });
+    });
+
+    describe('gRPC Multiple Proto Files URL Source', () => {
+        before(async () => {
+            // Stop existing server and start new one with multi-file proto
+            await mockGrpcServer.stop();
+            mockGrpcServer = new MockGrpcServer({
+                port: GRPC_TEST_PORT,
+                protoFiles: [join(fixturesPath, 'grpc/main.proto')]
+            });
+            await mockGrpcServer.start();
+        });
+
+        it('should load and cache gRPC schema from URL for multiple proto files', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCMultiURL',
+                    type: SourceType.GRPC,
+                    url: mockGrpcServer.getUrl()
+                }
+            ]);
+
+            const docs = await CacheManager.getDocs('TestGRPCMultiURL');
+
+            assert.strictEqual(docs.length, 1, 'Should have one cache entry');
+            assert.strictEqual(docs[0].name, 'TestGRPCMultiURL', 'Cache entry name should match');
+            assert.ok(docs[0].resources.length > 0, 'Should have resources');
+
+            const getUserProfileMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.GetUserProfile');
+            assert.ok(getUserProfileMethod, 'Should have GetUserProfile method');
+
+            const createUserMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.CreateUser');
+            assert.ok(createUserMethod, 'Should have CreateUser method');
+
+            const deleteUserMethod = docs[0].resources.find(r => r.name === 'example.main.UserManagementService.DeleteUser');
+            assert.ok(deleteUserMethod, 'Should have DeleteUser method');
+        });
+
+        it('should retrieve specific method details from multi-file gRPC URL source', async () => {
+            await setupCacheWithSources([
+                {
+                    name: 'TestGRPCMultiURL',
+                    type: SourceType.GRPC,
+                    url: mockGrpcServer.getUrl()
+                }
+            ]);
+
+            const details = await CacheManager.getDetails('example.main.UserManagementService.CreateUser');
+
+            assert.ok(details.length > 0, 'Should find CreateUser method details');
+            assert.strictEqual(details[0].resources[0].name, 'example.main.UserManagementService.CreateUser', 'Should match method name');
+
+            const createUserResource = details[0].resources[0];
+            assert.ok(createUserResource.details.request, 'Should have request details');
+            assert.ok(createUserResource.details.response, 'Should have response details');
+
+            const request = JSON.parse(createUserResource.details.request);
+            assert.strictEqual(request.type, 'CreateUserRequest', 'Request type should be CreateUserRequest');
+            assert.ok(Array.isArray(request.fields), 'Request should have fields array');
+            assert.ok(request.fields.some((f: any) => f.name === 'name'), 'Request should have name field');
+            assert.ok(request.fields.some((f: any) => f.name === 'email'), 'Request should have email field');
+
+            const response = JSON.parse(createUserResource.details.response);
+            assert.ok(response.type === 'User' || response.type === 'example.user.User', 'Response type should be User type');
+
+            // Verify no unknown types
+            let unknownCount = 0;
+            const checkUnknown = (obj: any) => {
+                if (obj.type === 'unknown') unknownCount++;
+                if (obj.fields) {
+                    obj.fields.forEach((f: any) => {
+                        if (f.type === 'unknown' || f.type?.includes('unknown')) unknownCount++;
+                        if (f.fields) checkUnknown(f);
+                    });
+                }
+            };
+            checkUnknown(request);
+            checkUnknown(response);
+            assert.strictEqual(unknownCount, 0, 'Should have no unknown types');
         });
     });
 });

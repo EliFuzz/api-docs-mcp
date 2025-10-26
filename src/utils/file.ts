@@ -13,3 +13,7 @@ export const isFileJSON = (source: FileSource): boolean => {
 export const isFileGql = (source: FileSource): boolean => {
     return ['.graphql', '.gql'].includes(path.extname(source.path).toLowerCase());
 }
+
+export const isFileProto = (source: FileSource): boolean => {
+    return path.extname(source.path).toLowerCase() === '.proto';
+}
