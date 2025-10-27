@@ -6,6 +6,7 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 
 - [API Docs MCP](#api-docs-mcp)
   - [Table of Contents](#table-of-contents)
+  - [MCP Platforms](#mcp-platforms)
   - [Features](#features)
   - [Example Use Cases](#example-use-cases)
     - [OpenAPI Petstore retrieval docs](#openapi-petstore-retrieval-docs)
@@ -25,6 +26,10 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
     - [Project Structure](#project-structure)
   - [Contributing](#contributing)
   - [License](#license)
+
+## MCP Platforms
+
+![mcp.so](https://img.shields.io/badge/mcp.so-ff6166?style=flat&link=https%3A%2F%2Fmcp.so%2Fserver%2Fapi-docs-mcp)
 
 ## Features
 
