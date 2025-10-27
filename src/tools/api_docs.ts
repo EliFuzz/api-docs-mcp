@@ -6,7 +6,7 @@ server.registerTool('api_docs', {
     title: 'API Documentation',
     description: 'Get a list of all available API methods',
     inputSchema: {
-        sourceName: z.string().describe('The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.').optional()
+        source: z.string().describe('The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.').optional()
     },
     outputSchema: {
         sources: z.array(z.object({
@@ -18,11 +18,11 @@ server.registerTool('api_docs', {
             }))
         }))
     }
-}, async ({ sourceName }: { sourceName?: string }) => {
+}, async ({ source }: { source?: string }) => {
     return {
         content: [],
         structuredContent: {
-            sources: (await CacheManager.getDocs(sourceName)).map(doc => ({
+            sources: (await CacheManager.getDocs(source)).map(doc => ({
                 name: doc.name,
                 resources: doc.resources.map(res => ({
                     name: res.name,
