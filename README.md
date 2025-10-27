@@ -8,8 +8,9 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Example Use Cases](#example-use-cases)
-    - [Petstore retrieval of all available GET methods](#petstore-retrieval-of-all-available-get-methods)
-    - [Petstore retrieval of a specific method](#petstore-retrieval-of-a-specific-method)
+    - [OpenAPI Petstore retrieval docs](#openapi-petstore-retrieval-docs)
+    - [GraphQL retrieval docs](#graphql-retrieval-docs)
+    - [Multiple Sources retrieval docs](#multiple-sources-retrieval-docs)
   - [Architecture](#architecture)
   - [Installation](#installation)
   - [Configuration](#configuration)
@@ -39,13 +40,17 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 
 ## Example Use Cases
 
-### Petstore retrieval of all available GET methods
+### OpenAPI Petstore retrieval docs
 
-<video src="https://github.com/user-attachments/assets/26023600-d809-47f2-9254-2de6a73bb23a" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/e2d73c08-7b4b-4157-bd17-aaf3090f67ec" width="100%" controls></video>
 
-### Petstore retrieval of a specific method
+### GraphQL retrieval docs
 
-<video src="https://github.com/user-attachments/assets/9ef66e19-c83b-4dcb-b7d0-44b3d94f140a" width="100%" controls></video>
+<video src="https://github.com/user-attachments/assets/c597015a-ee9f-4f2d-a332-1f1785d88c86" width="100%" controls></video>
+
+### Multiple Sources retrieval docs
+
+<video src="https://github.com/user-attachments/assets/3bf7724e-bc74-46c5-9e57-919ea2ec7b52" width="100%" controls></video>
 
 ## Architecture
 
