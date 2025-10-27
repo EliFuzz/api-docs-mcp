@@ -1,6 +1,6 @@
 {
   "name": "api-docs-mcp",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "MCP server for API and GraphQL documentation and search",
   "homepage": "https://github.com/EliFuzz/api-docs-mcp#readme",
   "repository": {
