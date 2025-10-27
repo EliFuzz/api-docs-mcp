@@ -111,7 +111,7 @@ graph TD
    - The processed documentation is stored in an in-memory cache (`src/utils/cache.ts`) with a specified TTL (Time-To-Live).
    - The cache is periodically refreshed.
 4. **Tool Usage**:
-   - `api_docs`: When invoked, this tool retrieves a list of all available API resources from the cache, filtered by `sourceName` if provided.
+   - `api_docs`: When invoked, this tool retrieves a list of all available API resources from the cache, filtered by `source` if provided.
    - `api_search`: When invoked with a `detailName`, this tool provides detailed documentation (request, response, error structures) for a specific API resource from the cache.
 
 ## Installation
@@ -245,7 +245,7 @@ This tool provides a list of all available API methods from the configured sourc
 
 ```typescript
 {
-    sourceName?: string; // The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.
+    source?: string; // The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.
 }
 ```
 
