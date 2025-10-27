@@ -29,7 +29,7 @@ Model Context Protocol (MCP) server that provides tools for interacting with API
 
 ## MCP Platforms
 
-![mcp.so](https://img.shields.io/badge/mcp.so-ff6166?style=flat&link=https%3A%2F%2Fmcp.so%2Fserver%2Fapi-docs-mcp)
+[![mcp.so](https://img.shields.io/badge/mcp.so-ff6166?style=flat)](https://mcp.so/server/api-docs-mcp)
 
 ## Features
 
