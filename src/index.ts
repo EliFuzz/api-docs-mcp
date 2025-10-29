@@ -6,7 +6,8 @@ import { setTimeout } from "timers";
 
 (async () => {
     await registerTools();
-    await server.connect(new StdioServerTransport());
     await CacheManager.refresh();
+    await server.connect(new StdioServerTransport());
+
     setTimeout(() => CacheManager.refresh(), 60 * 60 * 1000);
 })();
