@@ -5,16 +5,9 @@ import { processApiSchema } from "src/api/api";
 import { processGqlSchema } from "src/gql/gql";
 import { processGrpcSchema } from "src/grpc/grpc";
 import { loadConfig } from "src/utils/config";
-import { fetchApiSchema, fetchGqlSchema } from "src/utils/fetch";
-import { isFileGql, isFileJSON, isFileProto, readFile } from "src/utils/file";
+import { fetchApiSchema, fetchGqlSchema, fetchGrpcSchema } from "src/utils/fetch";
+import { isFileGql, isFileGrpc, isFileJSON, readFile, readGrpcFiles } from "src/utils/file";
 import { FileSource, isApiType, isFileSource, isGqlType, isGrpcType, SchemaSource, UrlSource } from "src/utils/source";
-
-export interface DetailEntry {
-    headers?: string;
-    request?: string;
-    response?: string;
-    error?: string;
-}
 
 export enum ResourceType {
     QUERY = 'query',
@@ -29,15 +22,15 @@ export enum ResourceType {
 }
 
 export interface SchemaDetail {
+    type: ResourceType;
     name: string;
-    resourceType: ResourceType;
-    context: string;
-    details: DetailEntry;
+    description: string;
+    schema: string;
 }
 
 export interface CacheEntry {
-    name: string;
     source: SchemaSource;
+    name: string;
     resources: SchemaDetail[];
     timestamp: number;
 }
@@ -107,8 +100,8 @@ export class CacheManager {
         return cacheEntry ? [cacheEntry] : Cache.getAllDocs();
     }
 
-    public static async getDetails(detailName: string): Promise<CacheEntry[]> {
-        return Cache.getDetails(detailName);
+    public static async getDetails(detailName: string, sourceName?: string): Promise<CacheEntry[]> {
+        return Cache.getDetails(detailName, sourceName);
     }
 
     public static clear(): void {
@@ -143,8 +136,8 @@ export class CacheManager {
         }
 
         if (isGrpcType(source)) {
-            if (isFileProto(source)) {
-                Cache.set({ name: source.name, source, resources: await processGrpcSchema(source.path), timestamp: Date.now() });
+            if (isFileGrpc(source)) {
+                Cache.set({ name: source.name, source, resources: await processGrpcSchema(await readGrpcFiles(source.path)), timestamp: Date.now() });
                 return;
             }
         }
@@ -159,13 +152,12 @@ export class CacheManager {
         }
 
         if (isApiType(source)) {
-            const schemaContent = await fetchApiSchema(source);
-            Cache.set({ name: source.name, source, resources: await processApiSchema(schemaContent), timestamp: Date.now() });
+            Cache.set({ name: source.name, source, resources: await processApiSchema(await fetchApiSchema(source)), timestamp: Date.now() });
             return;
         }
 
         if (isGrpcType(source)) {
-            Cache.set({ name: source.name, source, resources: await processGrpcSchema(source), timestamp: Date.now() });
+            Cache.set({ name: source.name, source, resources: await processGrpcSchema([await fetchGrpcSchema(source)]), timestamp: Date.now() });
             return;
         }
     }

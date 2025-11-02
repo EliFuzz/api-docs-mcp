@@ -1,356 +1,219 @@
-import * as grpc from '@grpc/grpc-js';
-import * as protoLoader from '@grpc/proto-loader';
-import { GrpcReflection } from 'grpc-js-reflection-client';
-import * as path from 'path';
+import protobuf from 'protobufjs';
 import { ResourceType, SchemaDetail } from 'src/utils/cache';
-import { UrlSource } from 'src/utils/source';
 
-interface FieldDetail {
-    name: string;
-    type: string;
-    description?: string;
-    required?: boolean;
-    repeated?: boolean;
-    fields?: FieldDetail[];
-    enumValues?: string[];
-}
-
-interface MethodDescriptor {
-    name: string;
-    inputType: string;
-    outputType: string;
-    requestStream: boolean;
-    responseStream: boolean;
-}
-
-interface ServiceDescriptor {
-    name: string;
-    methods: MethodDescriptor[];
-}
-
-export const processGrpcSchema = async (input: string | UrlSource): Promise<SchemaDetail[]> => {
+export const processGrpcSchema = async (input: string[]): Promise<SchemaDetail[]> => {
     const methods: SchemaDetail[] = [];
 
     try {
-        let packageDefinition: protoLoader.PackageDefinition;
-        let services: ServiceDescriptor[];
-
-        if (typeof input === 'string') {
-            packageDefinition = await loadProtoFile(input);
-            const grpcObject = grpc.loadPackageDefinition(packageDefinition);
-            services = extractServicesFromGrpcObject(grpcObject);
-        } else {
-            const result = await fetchGrpcReflection(input);
-            packageDefinition = result.packageDefinition;
-            services = result.services;
+        const root = new protobuf.Root();
+        for (const content of input) {
+            protobuf.parse(content, root, { keepCase: true });
         }
+        const jsonDescriptor = root.toJSON({ keepComments: true });
+        const services = extractServices(jsonDescriptor);
 
-        for (const service of services) {
+        for (const serviceName in services) {
+            const service = services[serviceName];
             for (const method of service.methods) {
-                methods.push(buildMethodDetail(service.name, method, packageDefinition));
+                const schema = generateMethodProto(serviceName, method, jsonDescriptor);
+                methods.push({
+                    name: `${serviceName.split('.').pop()}.${method.name}`,
+                    description: method.comment || '',
+                    type: ResourceType.GRPC,
+                    schema
+                });
             }
         }
-    } catch (error) { }
+    } catch {
+        return [];
+    }
 
     return methods;
 };
 
-const loadProtoFile = async (filePath: string): Promise<protoLoader.PackageDefinition> => {
-    const options: protoLoader.Options = {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true,
-        includeDirs: [path.dirname(filePath)]
-    };
+const extractServices = (jsonDescriptor: any): Record<string, { methods: any[] }> => {
+    const services: Record<string, { methods: any[] }> = {};
 
-    return protoLoader.loadSync(path.resolve(filePath), options);
-};
+    const extractFromNamespace = (namespace: any, path: string[] = []) => {
+        if (namespace.nested) {
+            for (const key in namespace.nested) {
+                const item = namespace.nested[key];
+                const currentPath = [...path, key];
 
-const fetchGrpcReflection = async (source: UrlSource): Promise<{ packageDefinition: protoLoader.PackageDefinition; services: ServiceDescriptor[] }> => {
-    const credentials = source.url.startsWith('https://') || source.headers?.['authorization']
-        ? grpc.ChannelCredentials.createSsl()
-        : grpc.ChannelCredentials.createInsecure();
+                if (item.methods) {
+                    const serviceName = key;
+                    services[serviceName] = { methods: [] };
 
-    const client = new GrpcReflection(source.url, credentials);
-
-    try {
-        const serviceNames = await client.listServices();
-        const allServices: ServiceDescriptor[] = [];
-        const combinedPackageDefinition: Record<string, protoLoader.AnyDefinition> = {};
-
-        for (const serviceName of serviceNames) {
-            if (serviceName.startsWith('grpc.reflection')) {
-                continue;
-            }
-
-            try {
-                const methods = await client.listMethods(serviceName);
-                const descriptor = await client.getDescriptorBySymbol(serviceName);
-
-                const packageObject = descriptor.getPackageObject({
-                    keepCase: true,
-                    longs: String,
-                    enums: String,
-                    defaults: true,
-                    oneofs: true
-                }) as Record<string, protoLoader.AnyDefinition>;
-
-                Object.assign(combinedPackageDefinition, packageObject);
-
-                allServices.push({
-                    name: serviceName,
-                    methods: methods.map(m => {
-                        const definition = (m as any).definition;
-                        return {
-                            name: m.name,
-                            inputType: definition?.requestType?.type?.name || 'unknown',
-                            outputType: definition?.responseType?.type?.name || 'unknown',
-                            requestStream: definition?.requestStream || false,
-                            responseStream: definition?.responseStream || false
-                        };
-                    })
-                });
-            } catch (methodError) {
-                console.error(`Error processing service ${serviceName}:`, methodError);
-            }
-        }
-
-        return {
-            packageDefinition: combinedPackageDefinition as protoLoader.PackageDefinition,
-            services: allServices
-        };
-    } catch (error) {
-        throw error;
-    }
-};
-
-const extractServicesFromGrpcObject = (grpcObject: any): ServiceDescriptor[] => {
-    const services: ServiceDescriptor[] = [];
-
-    const traverse = (obj: any, prefix = ''): void => {
-        for (const key in obj) {
-            const value = obj[key];
-
-            if (value && typeof value === 'function' && value.service && typeof value.service === 'object') {
-                const serviceName = prefix ? `${prefix}.${key}` : key;
-                const methodDescriptors: MethodDescriptor[] = [];
-
-                for (const methodName in value.service) {
-                    const methodDef = value.service[methodName];
-                    if (methodDef && methodDef.requestType && methodDef.responseType) {
-                        methodDescriptors.push({
+                    for (const methodName in item.methods) {
+                        const method = item.methods[methodName];
+                        services[serviceName].methods.push({
                             name: methodName,
-                            inputType: methodDef.requestType.type?.name || methodDef.requestType.format || 'unknown',
-                            outputType: methodDef.responseType.type?.name || methodDef.responseType.format || 'unknown',
-                            requestStream: methodDef.requestStream || false,
-                            responseStream: methodDef.responseStream || false
+                            requestType: method.requestType,
+                            responseType: method.responseType,
+                            comment: method.comment || '',
+                            options: method.options || {}
                         });
                     }
+                } else if (item.nested) {
+                    extractFromNamespace(item, currentPath);
                 }
-
-                if (methodDescriptors.length > 0) {
-                    services.push({ name: serviceName, methods: methodDescriptors });
-                }
-            } else if (value && typeof value === 'object' && !value.service) {
-                const newPrefix = prefix ? `${prefix}.${key}` : key;
-                traverse(value, newPrefix);
             }
         }
     };
 
-    traverse(grpcObject);
+    extractFromNamespace(jsonDescriptor);
     return services;
 };
 
-const buildMethodDetail = (serviceName: string, method: MethodDescriptor, packageDefinition: protoLoader.PackageDefinition): SchemaDetail => {
-    const methodType = getMethodType(method.requestStream, method.responseStream);
-    const requestFields = extractMessageFields(method.inputType, packageDefinition);
-    const responseFields = extractMessageFields(method.outputType, packageDefinition);
+const generateMethodProto = (serviceName: string, method: any, jsonDescriptor: any): string => {
+    const lines: string[] = ['syntax = "proto3";', ''];
 
-    return {
-        name: `${serviceName}.${method.name}`,
-        context: methodType,
-        resourceType: ResourceType.GRPC,
-        details: {
-            request: JSON.stringify({ type: method.inputType, stream: method.requestStream, fields: requestFields }),
-            response: JSON.stringify({ type: method.outputType, stream: method.responseStream, fields: responseFields })
+    const collectedMessages: Record<string, any> = {};
+    const collectedEnums: Record<string, any> = {};
+
+    collectTypeDependencies(method.requestType, jsonDescriptor, collectedMessages, collectedEnums);
+    collectTypeDependencies(method.responseType, jsonDescriptor, collectedMessages, collectedEnums);
+
+    for (const enumName in collectedEnums) {
+        const enumData = collectedEnums[enumName];
+        if (enumData.comment) {
+            lines.push(`// ${enumData.comment}`);
         }
-    };
-};
-
-const getMethodType = (requestStream: boolean, responseStream: boolean): string => {
-    if (requestStream && responseStream) {
-        return 'Bidirectional Streaming';
+        lines.push(`enum ${enumName.split('.').pop()} {`);
+        for (const valueName in enumData.values) {
+            lines.push(`  ${valueName} = ${enumData.values[valueName]};`);
+        }
+        lines.push('}');
+        lines.push('');
     }
 
-    if (requestStream) {
-        return 'Client Streaming';
-    }
-
-    if (responseStream) {
-        return 'Server Streaming';
-    }
-
-    return 'Unary';
-};
-
-const extractMessageFields = (typeName: string, packageDefinition: protoLoader.PackageDefinition, visitedTypes: Set<string> = new Set()): FieldDetail[] => {
-    if (visitedTypes.has(typeName)) {
-        return [];
-    }
-
-    visitedTypes.add(typeName);
-
-    const messageType = findMessageType(typeName, packageDefinition);
-    if (!messageType || !messageType.type || !messageType.type.field) {
-        return [];
-    }
-
-    const fields: FieldDetail[] = [];
-
-    for (const field of messageType.type.field) {
-        const fieldDetail: FieldDetail = {
-            name: field.name || '',
-            type: getFieldType(field),
-            required: field.label === 2 || field.label === 'LABEL_REQUIRED',
-            repeated: field.label === 3 || field.label === 'LABEL_REPEATED'
-        };
-
-        if (field.typeName) {
-            const cleanTypeName = field.typeName.startsWith('.') ? field.typeName.substring(1) : field.typeName;
-
-            const isEnum = field.type === 14 || field.type === 'TYPE_ENUM';
-            const isMessage = field.type === 11 || field.type === 'TYPE_MESSAGE';
-
-            if (isEnum) {
-                const enumType = findEnumType(cleanTypeName, packageDefinition);
-                if (enumType && enumType.value) {
-                    fieldDetail.enumValues = enumType.value.map((v: any) => v.name).filter(Boolean);
-                }
-            } else if (isMessage) {
-                if (!visitedTypes.has(cleanTypeName)) {
-                    const nestedFields = extractMessageFields(cleanTypeName, packageDefinition, new Set(visitedTypes));
-                    if (nestedFields.length > 0) {
-                        fieldDetail.fields = nestedFields;
-                    }
+    const addMessage = (msgName: string, msgData: any, indent = '') => {
+        if (msgData.comment) {
+            lines.push(`${indent}// ${msgData.comment}`);
+        }
+        lines.push(`${indent}message ${msgName.split('.').pop()} {`);
+        if (msgData.fields) {
+            for (const fieldName in msgData.fields) {
+                const field = msgData.fields[fieldName];
+                const label = field.rule === 'repeated' ? 'repeated ' : '';
+                lines.push(`${indent}  ${label}${field.type} ${fieldName} = ${field.id};`);
+            }
+        }
+        if (msgData.nested) {
+            for (const nestedName in msgData.nested) {
+                const nested = msgData.nested[nestedName];
+                if (nested.fields) {
+                    addMessage(`${msgName}.${nestedName}`, nested, indent + '  ');
                 }
             }
         }
+        lines.push(`${indent}}`);
+        lines.push('');
+    };
 
-        fields.push(fieldDetail);
+    for (const msgName in collectedMessages) {
+        addMessage(msgName, collectedMessages[msgName]);
     }
 
-    return fields;
+    lines.push(`service ${serviceName.split('.').pop()} {`);
+    if (method.comment) {
+        lines.push(`  // ${method.comment}`);
+    }
+    const reqStream = method.options?.requestStream ? 'stream ' : '';
+    const resStream = method.options?.responseStream ? 'stream ' : '';
+    lines.push(`  rpc ${method.name} (${reqStream}${method.requestType}) returns (${resStream}${method.responseType}) {};`);
+    lines.push('}');
+
+    return lines.join('\n');
 };
 
-const findMessageType = (typeName: string, packageDefinition: protoLoader.PackageDefinition): any => {
-    const cleanName = typeName.startsWith('.') ? typeName.substring(1) : typeName;
+const collectTypeDependencies = (
+    typeName: string,
+    jsonDescriptor: any,
+    collectedMessages: Record<string, any>,
+    collectedEnums: Record<string, any>
+): void => {
+    if (!typeName || collectedMessages[typeName]) return;
 
-    const traverse = (obj: any): any => {
-        for (const key in obj) {
-            const value = obj[key];
-            if (value && typeof value === 'object') {
-                if (value.format === 'Protocol Buffer 3 DescriptorProto' || value.type?.field) {
-                    const fullName = value.name || key;
-                    if (fullName === cleanName || fullName.endsWith(`.${cleanName}`)) {
-                        return value;
-                    }
-                }
-                const result = traverse(value);
-                if (result) return result;
-            }
+    let typeDef;
+    if (typeName.includes('.')) {
+        const parts = typeName.split('.');
+        let current = jsonDescriptor.nested;
+        for (const part of parts) {
+            current = current?.[part]?.nested || current?.[part];
         }
-        return null;
-    };
-
-    return traverse(packageDefinition);
-};
-
-const findEnumType = (typeName: string, packageDefinition: protoLoader.PackageDefinition): any => {
-    const cleanName = typeName.startsWith('.') ? typeName.substring(1) : typeName;
-
-    const traverse = (obj: any): any => {
-        for (const key in obj) {
-            const value = obj[key];
-            if (value && typeof value === 'object') {
-                if (value.format === 'Protocol Buffer 3 EnumDescriptorProto' || value.value) {
-                    const fullName = value.name || key;
-                    if (fullName === cleanName || fullName.endsWith(`.${cleanName}`)) {
-                        return value;
-                    }
-                }
-                const result = traverse(value);
-                if (result) return result;
-            }
-        }
-        return null;
-    };
-
-    return traverse(packageDefinition);
-};
-
-const getFieldType = (field: any): string => {
-    const numericTypeMap: Record<number, string> = {
-        1: 'double',
-        2: 'float',
-        3: 'int64',
-        4: 'uint64',
-        5: 'int32',
-        6: 'fixed64',
-        7: 'fixed32',
-        8: 'bool',
-        9: 'string',
-        10: 'group',
-        11: 'message',
-        12: 'bytes',
-        13: 'uint32',
-        14: 'enum',
-        15: 'sfixed32',
-        16: 'sfixed64',
-        17: 'sint32',
-        18: 'sint64'
-    };
-
-    const stringTypeMap: Record<string, string> = {
-        'TYPE_DOUBLE': 'double',
-        'TYPE_FLOAT': 'float',
-        'TYPE_INT64': 'int64',
-        'TYPE_UINT64': 'uint64',
-        'TYPE_INT32': 'int32',
-        'TYPE_FIXED64': 'fixed64',
-        'TYPE_FIXED32': 'fixed32',
-        'TYPE_BOOL': 'bool',
-        'TYPE_STRING': 'string',
-        'TYPE_GROUP': 'group',
-        'TYPE_MESSAGE': 'message',
-        'TYPE_BYTES': 'bytes',
-        'TYPE_UINT32': 'uint32',
-        'TYPE_ENUM': 'enum',
-        'TYPE_SFIXED32': 'sfixed32',
-        'TYPE_SFIXED64': 'sfixed64',
-        'TYPE_SINT32': 'sint32',
-        'TYPE_SINT64': 'sint64'
-    };
-
-    let baseType: string;
-    if (typeof field.type === 'number') {
-        baseType = numericTypeMap[field.type] || 'unknown';
-    } else if (typeof field.type === 'string') {
-        baseType = stringTypeMap[field.type] || 'unknown';
+        typeDef = current;
     } else {
-        baseType = 'unknown';
+        typeDef = findTypeDefinition(typeName, jsonDescriptor);
     }
 
-    if (field.typeName) {
-        const cleanTypeName = field.typeName.startsWith('.') ? field.typeName.substring(1) : field.typeName;
-        baseType = cleanTypeName;
+    if (!typeDef) return;
+
+    collectedMessages[typeName] = typeDef;
+
+    if (typeDef.fields) {
+        for (const fieldName in typeDef.fields) {
+            const field = typeDef.fields[fieldName];
+            if (field.type && !field.type.includes('.') && !['string', 'int32', 'int64', 'uint32', 'uint64', 'sint32', 'sint64', 'fixed32', 'fixed64', 'sfixed32', 'sfixed64', 'float', 'double', 'bool', 'bytes'].includes(field.type)) {
+                const enumType = findEnumType(field.type, jsonDescriptor);
+                if (enumType) {
+                    collectedEnums[enumType.name] = enumType.data;
+                }
+            } else if (field.type && field.type.includes('.') && !field.type.startsWith('google.protobuf.')) {
+                collectTypeDependencies(field.type, jsonDescriptor, collectedMessages, collectedEnums);
+            }
+        }
     }
 
-    if (field.label === 'LABEL_REPEATED' || field.label === 3) {
-        return `repeated ${baseType}`;
+    if (typeDef.nested) {
+        for (const nestedName in typeDef.nested) {
+            const nested = typeDef.nested[nestedName];
+            if (nested.fields) {
+                collectTypeDependencies(`${typeName}.${nestedName}`, jsonDescriptor, collectedMessages, collectedEnums);
+            } else if (nested.values) {
+                collectedEnums[`${typeName}.${nestedName}`] = nested;
+            }
+        }
     }
+};
 
-    return baseType;
+const findTypeDefinition = (typeName: string, jsonDescriptor: any): any => {
+    const findInNamespace = (namespace: any): any => {
+        if (namespace.nested) {
+            for (const key in namespace.nested) {
+                const item = namespace.nested[key];
+
+                if ((item.fields || item.methods) && key === typeName) {
+                    return item;
+                } else if (item.nested) {
+                    const found = findInNamespace(item);
+                    if (found) return found;
+                }
+            }
+        }
+        return null;
+    };
+
+    return findInNamespace(jsonDescriptor);
+};
+
+const findEnumType = (typeName: string, jsonDescriptor: any): { name: string; data: any } | null => {
+    const findInNamespace = (namespace: any, path: string[] = []): { name: string; data: any } | null => {
+        if (namespace.nested) {
+            for (const key in namespace.nested) {
+                const item = namespace.nested[key];
+                const currentPath = [...path, key];
+
+                if (item.values && key === typeName) {
+                    return { name: currentPath.join('.'), data: item };
+                } else if (item.nested) {
+                    const found = findInNamespace(item, currentPath);
+                    if (found) return found;
+                }
+            }
+        }
+        return null;
+    };
+
+    return findInNamespace(jsonDescriptor);
 };

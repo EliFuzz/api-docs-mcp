@@ -7,6 +7,7 @@ server.registerTool('api_search', {
     description: 'Search for a specific API method by name and get its full definition',
     inputSchema: {
         detailName: z.string().describe('The exact resource name of the API method to search for that was provided in `api_docs` tool\'s output'),
+        sourceName: z.string().describe('The name of the source where the API method is defined that was provided in `api_docs` tool\'s output').optional()
     },
     outputSchema: {
         details: z.array(z.object({
@@ -15,29 +16,21 @@ server.registerTool('api_search', {
                 name: z.string().describe('The name of the resource'),
                 resourceType: z.string().describe('The type of API resource'),
                 description: z.string().describe('Context or description of the resource'),
-                details: z.object({
-                    request: z.string().describe('The request structure or input parameters for the API method').optional(),
-                    response: z.string().describe('The response structure or output format for the API method').optional(),
-                    error: z.string().describe('Error information or error handling details for the API method').optional()
-                }).describe('Detailed information about the resource')
+                schema: z.string().describe('The complete schema information for the API method'),
             })).describe('Array of matched resources'),
         }))
     }
-}, async ({ detailName }: { detailName: string }) => {
+}, async ({ detailName, sourceName }: { detailName: string, sourceName?: string }) => {
     return {
         content: [],
         structuredContent: {
-            details: (await CacheManager.getDetails(detailName)).map(detail => ({
+            details: (await CacheManager.getDetails(detailName, sourceName)).map(detail => ({
                 name: detail.name,
                 resources: detail.resources.map(res => ({
                     name: res.name,
-                    resourceType: res.resourceType,
-                    description: res.context,
-                    details: {
-                        request: res.details.request,
-                        response: res.details.response,
-                        error: res.details.error
-                    }
+                    resourceType: res.type,
+                    description: res.description,
+                    schema: res.schema,
                 })),
             }))
         }
