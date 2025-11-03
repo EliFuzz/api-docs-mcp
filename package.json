@@ -26,7 +26,7 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias",
-    "start": "node build/index.js",
+    "start": "node --env-file=.env build/index.js",
     "dev": "tsc --watch",
     "test": "node --import tsx --test example/**/*.test.ts",
     "test:watch": "node --import tsx --test --watch example/**/*.test.ts",
