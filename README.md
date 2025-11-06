@@ -255,7 +255,7 @@ This tool provides a list of all available API methods from the configured sourc
 
 ```typescript
 {
-    source?: string; // The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.
+    sourceName?: string; // The name of the API source (e.g., "GitHub") from MCP configuration environment variables. If not provided, docs from all sources will be returned.
 }
 ```
 
@@ -264,11 +264,11 @@ This tool provides a list of all available API methods from the configured sourc
 ```typescript
 {
   sources: Array<{
-    name: string; // The name of the source API
+    sourceName: string; // The name of the source API
     resources: Array<{
-      name: string; // The name of the API resource
-      description: string; // A brief description of the API resource
+      resourceName: string; // The name of the API resource
       resourceType: string; // The type of the API resource (e.g., "POST", "GET", "mutation", "query")
+      resourceDescription: string; // A brief description of the API resource
     }>;
   }>;
 }
@@ -280,32 +280,32 @@ This tool provides a list of all available API methods from the configured sourc
 {
   "sources": [
     {
-      "name": "GitHubGraphQL",
+      "sourceName": "GitHubGraphQL",
       "resources": [
         {
-          "name": "getUser",
-          "description": "Fetch a user by username",
-          "resourceType": "query"
+          "resourceName": "getUser",
+          "resourceType": "query",
+          "resourceDescription": "Fetch a user by username"
         },
         {
-          "name": "createIssue",
-          "description": "Create a new issue in a repository",
-          "resourceType": "mutation"
+          "resourceName": "createIssue",
+          "resourceType": "mutation",
+          "resourceDescription": "Create a new issue in a repository"
         }
       ]
     },
     {
-      "name": "PetstoreAPI",
+      "sourceName": "PetstoreAPI",
       "resources": [
         {
-          "name": "getPetById",
-          "description": "Find pet by ID",
-          "resourceType": "GET"
+          "resourceName": "getPetById",
+          "resourceType": "GET",
+          "resourceDescription": "Find pet by ID"
         },
         {
-          "name": "addPet",
-          "description": "Add a new pet to the store",
-          "resourceType": "POST"
+          "resourceName": "addPet",
+          "resourceType": "POST",
+          "resourceDescription": "Add a new pet to the store"
         }
       ]
     }
@@ -323,7 +323,7 @@ This tool provides detailed documentation for a specific API method.
 
 ```typescript
 {
-  detailName: string; // The exact resource name of the API method to search for that was provided in `api_docs` tool's output
+  resourceName: string; // The exact resource name of the API method to search for that was provided in `api_docs` tool's output
 }
 ```
 
@@ -332,11 +332,11 @@ This tool provides detailed documentation for a specific API method.
 ```typescript
 {
   details: Array<{
-    name: string; // The name of the cache entry
+    sourceName: string; // The name of the source API
     resources: Array<{
-      name: string; // The name of the resource
+      resourceName: string; // The name of the resource
       resourceType: "query" | "mutation" | "subscription"; // The type of GraphQL resource
-      description: string; // Context or description of the resource
+      resourceDescription: string; // Context or description of the resource
       details: {
         request?: string; // The request structure or input parameters for the API method
         response?: string; // The response structure or output format for the API method
@@ -353,12 +353,12 @@ This tool provides detailed documentation for a specific API method.
 {
   "details": [
     {
-      "name": "GitHubGraphQL",
+      "sourceName": "GitHubGraphQL",
       "resources": [
         {
-          "name": "getUser",
+          "resourceName": "getUser",
           "resourceType": "query",
-          "description": "Fetch a user by username",
+          "resourceDescription": "Fetch a user by username",
           "details": {
             "request": "{ username: String! }",
             "response": "{ id: ID!, login: String!, name: String }",
